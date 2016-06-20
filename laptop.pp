@@ -33,6 +33,14 @@ package{['gvfs-bin','libgnome-keyring-dev']:
 }
 
 ###################################################################
+# My folder structures
+###################################################################
+
+file{["${home}/workspace","${home}/workspace/puppet"]:
+  ensure => directory,
+}
+
+###################################################################
 # Packages for software I want
 ###################################################################
 
@@ -217,3 +225,72 @@ file{"${home}/.xinitrc":
   owner   => $username,
   mode    => '0644'
 }
+
+###################################################################
+# Autokey scripts + keepass integration
+###################################################################
+$autokey_keepass_template = @(END)
+key = '<%= $keepass_key %>'
+clipass_path = '<%= $clipass_path %>'
+output = system.exec_command("echo `php "+clipass_path+" --key='"+key+"'`")
+keyboard.send_keys(output)
+END
+
+file{"${home}/workspace/keepass":
+  ensure => directory,
+}
+
+$clipass_root = "${home}/workspace/keepass/clipass"
+$clipass_path = "${clipass_root}/clipass.php"
+
+file { "${home}/AK Scripts/pw-pk.py":
+  ensure  => file,
+  content => inline_epp($autokey_keepass_template, {'keepass_key' => 'ProKarma'}),
+}
+file { "${home}/AK Scripts/pw-tmo1.py":
+  ensure  => file,
+  content => inline_epp($autokey_keepass_template, {'keepass_key' => 'T-Mobile NTid'}),
+}
+file { "${home}/AK Scripts/pw-tmo2.py":
+  ensure  => file,
+  content => inline_epp($autokey_keepass_template, {'keepass_key' => 'T-Mobile two'}),
+}
+file { "${home}/AK Scripts/Email.txt":
+  ensure  => file,
+  content => '@prokarma.com',
+}
+file { "${home}/AK Scripts/Username.txt":
+  ensure  => file,
+  content => 'jsouza',
+}
+
+# CliPass
+$composer_template = @(END)
+php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+php -r "if (hash_file('SHA384', 'composer-setup.php') === '070854512ef404f16bac87071a6db9fd9721da1684cd4589b1196c3faf71b9a2682e2311b36a5079825e155ac7ce150d') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+php composer-setup.php
+php -r "unlink('composer-setup.php');"
+END
+
+vcsrepo{$clipass_root:
+  ensure => present,
+  provider => 'git',
+  source => 'https://github.com/bartlomiej-dudala/clipass.git',
+} -> 
+file{"${clipass_root}/get_composer.sh":
+  content => inline_epp($composer_template),
+  mode => '0755',
+} ->
+exec{"install_composer":
+  cwd => $clipass_root,
+  command => "${clipass_root}/get_composer.sh",
+  # This is wrong, I just don't know what is correct
+  creates => "${clipass_root}/vendor",
+} -> 
+exec{"install clipass":
+  cwd => $clipass_root,
+  command => "/usr/bin/php composar.phar install",
+  # This is wrong, I just don't know what is correct
+  creates => "${clipass_root}/vendor/autoload.php",
+}
+notice("You may need to run the composer stuff in ${clipass_root} manually?")
