@@ -23,7 +23,7 @@ file{'/opt/installers':
   ensure => directory,
 }
 
-$username = 'josh'
+$username = 'jsouza'
 $home = "/home/${username}"
 
 
@@ -32,6 +32,10 @@ package{['gvfs-bin','libgnome-keyring-dev']:
   before => Package['slack-desktop'],
 }
 
+package{['mono-complete','php-cli', 'php-mbstring', 'php-mcrypt']:
+  ensure => present,
+  before => Package['keepass2'],
+}
 ###################################################################
 # My folder structures
 ###################################################################
@@ -61,7 +65,7 @@ $package_details={
   'gitkraken' => {
     'installer' => 'gitkraken.deb',
     'source' => 'https://release.gitkraken.com/linux/gitkraken-amd64.deb',
-  },
+  }
 }
 
 create_resources(download_package_install,$package_details)
@@ -69,6 +73,9 @@ create_resources(download_package_install,$package_details)
 ###################################################################
 # Configuration of Sublime Text
 ###################################################################
+file { "${home}/.config/sublime-text-3":
+  ensure => directory,
+} 
 file { "${home}/.config/sublime-text-3/Packages": 
   ensure => directory,
   require => Package["sublime-text"],
@@ -120,6 +127,7 @@ package{[
   'terminator',
   'autokey-gtk',
   'keepass2',
+  'powerline',
   ]:
   ensure => present,
 }
@@ -127,6 +135,9 @@ package{[
 ###################################################################
 # Fonts
 ###################################################################
+file{'/usr/local/share/fonts/truetype':
+  ensure => directory,
+}
 file{'/usr/local/share/fonts/truetype/hackfont':
   ensure => directory,
 } ->
@@ -159,10 +170,15 @@ file{'/usr/local/bin/rbenv':
 # Zsh config
 ###################################################################
 # for multiple users in one shot
-ohmyzsh::install { ['root', 'josh']: }
-ohmyzsh::theme { ['root', 'josh']: 
+ohmyzsh::install { ['root', $username]: }
+ohmyzsh::theme { ['root', $username]: 
   theme => 'agnoster' 
 } # specific theme
+file_line{'add powerline':
+  path => "${home}/.zshrc",
+  line => 'source /usr/share/powerline/bindings/zsh/powerline.zsh',
+  after => 'source $ZSH/oh-my-zsh.sh',
+}
 file_line{'zsh_rbenv_root':
   path => "${home}/.zshrc",
   line => 'export RBENV_ROOT=/usr/local/rbenv',
@@ -207,6 +223,31 @@ class { 'docker':
 }
 
 ###################################################################
+# Install KeePassHTTP
+###################################################################
+wget::fetch { 'download keepasshttp':
+  source => 'https://raw.github.com/pfn/keepasshttp/master/KeePassHttp.plgx',
+  destination => '/usr/lib/keepass2/',
+  mode => '0644',
+  require => Package['keepass2'],
+}
+
+###################################################################
+# Screencloud
+###################################################################
+
+apt::key { 'screencloud':
+  id => '53C297DBF366CF7DEEB5ABF81BE1E8D7A2B5E9D5',
+  source => 'http://download.opensuse.org/repositories/home:olav-st/xUbuntu_16.04/Release.key',
+}->
+apt::source { 'screencloud':
+  comment => 'This is for installing ScreenCloud',
+  location => 'http://download.opensuse.org/repositories/home:/olav-st/xUbuntu_16.04/',
+  release => '/',
+  repos => '',
+}->
+package{'screencloud':}
+###################################################################
 # Correct caps lock to be tab
 ###################################################################
 file{"${home}/.Xmodmap":
@@ -236,6 +277,99 @@ output = system.exec_command("echo `php "+clipass_path+" --key='"+key+"'`")
 keyboard.send_keys(output)
 END
 
+$autokey_phrase = @(END)
+{
+    "usageCount": 2, 
+    "omitTrigger": false, 
+    "prompt": false, 
+    "description": "<%= $name %>", 
+    "abbreviation": {
+        "wordChars": "[\\w]", 
+        "abbreviations": [], 
+        "immediate": false, 
+        "ignoreCase": false, 
+        "backspace": true, 
+        "triggerInside": false
+    }, 
+    "hotkey": {
+        "hotKey": "<%= $hotkey %>", 
+        "modifiers": [
+            "<super>"
+        ]
+    }, 
+    "modes": [
+        3
+    ], 
+    "showInTrayMenu": false, 
+    "matchCase": false, 
+    "filter": {
+        "regex": null, 
+        "isRecursive": false
+    }, 
+    "type": "phrase", 
+    "sendMode": "kb"
+}
+END
+
+$autokey_script = @(END)
+{
+    "usageCount": 0, 
+    "omitTrigger": false, 
+    "prompt": false, 
+    "description": "<%= $name %>", 
+    "abbreviation": {
+        "wordChars": "[\\w]", 
+        "abbreviations": [], 
+        "immediate": false, 
+        "ignoreCase": false, 
+        "backspace": true, 
+        "triggerInside": false
+    }, 
+    "hotkey": {
+        "hotKey": "<%= $hotkey %>", 
+        "modifiers": [
+            "<super>"
+        ]
+    }, 
+    "modes": [
+        3
+    ], 
+    "showInTrayMenu": false, 
+    "filter": {
+        "regex": null, 
+        "isRecursive": false
+    }, 
+    "type": "script", 
+    "store": {}
+}
+END
+
+$autokey_folder = @(END)
+{
+    "usageCount": 0, 
+    "abbreviation": {
+        "wordChars": "[\\w]", 
+        "abbreviations": [], 
+        "immediate": false, 
+        "ignoreCase": false, 
+        "backspace": true, 
+        "triggerInside": false
+    }, 
+    "modes": [], 
+    "title": "<%= $name %>", 
+    "hotkey": {
+        "hotKey": null, 
+        "modifiers": []
+    }, 
+    "filter": {
+        "regex": null, 
+        "isRecursive": false
+    }, 
+    "type": "folder", 
+    "showInTrayMenu": false
+}
+END
+
 file{"${home}/workspace/keepass":
   ensure => directory,
 }
@@ -243,31 +377,84 @@ file{"${home}/workspace/keepass":
 $clipass_root = "${home}/workspace/keepass/clipass"
 $clipass_path = "${clipass_root}/clipass.php"
 
+file { "${home}/AK Scripts":
+  ensure => directory,
+  owner  => $username,
+  group  => $username,
+}
+file { "${home}/AK Scripts/.folder.json":
+  ensure  => file,
+  content => inline_epp($autokey_folder, {'name' => 'AK Scripts'}),
+  owner  => $username,
+  group  => $username,
+}
 file { "${home}/AK Scripts/pw-pk.py":
   ensure  => file,
   content => inline_epp($autokey_keepass_template, {'keepass_key' => 'ProKarma'}),
+  owner  => $username,
+  group  => $username,
+}
+file { "${home}/AK Scripts/.pw-pk.json":
+  ensure  => file,
+  content => inline_epp($autokey_script, {'name' => 'pw-pk', 'hotkey' => 'p'}),
+  owner   => $username,
+  group   => $username,
 }
 file { "${home}/AK Scripts/pw-tmo1.py":
   ensure  => file,
   content => inline_epp($autokey_keepass_template, {'keepass_key' => 'T-Mobile NTid'}),
+  owner   => $username,
+  group   => $username,
+}
+file { "${home}/AK Scripts/.pw-tmo1.json":
+  ensure  => file,
+  content => inline_epp($autokey_script, {'name' => 'pw-tmo1', 'hotkey' => 'o'}),
+  owner   => $username,
+  group   => $username,
 }
 file { "${home}/AK Scripts/pw-tmo2.py":
   ensure  => file,
   content => inline_epp($autokey_keepass_template, {'keepass_key' => 'T-Mobile two'}),
+  owner   => $username,
+  group   => $username,
+}
+file { "${home}/AK Scripts/.pw-tmo2.json":
+  ensure  => file,
+  content => inline_epp($autokey_script, {'name' => 'pw-tmo2', 'hotkey' => 'i'}),
+  owner   => $username,
+  group   => $username,
 }
 file { "${home}/AK Scripts/Email.txt":
   ensure  => file,
   content => '@prokarma.com',
+  owner   => $username,
+  group   => $username,
+}
+file { "${home}/AK Scripts/.Email.json":
+  ensure  => file,
+  content => inline_epp($autokey_phrase, {'name' => 'Email', 'hotkey' => 'e'}),
+  owner   => $username,
+  group   => $username,
 }
 file { "${home}/AK Scripts/Username.txt":
   ensure  => file,
   content => 'jsouza',
+  owner   => $username,
+  group   => $username,
+}
+file { "${home}/AK Scripts/.Username.json":
+  ensure  => file,
+  content => inline_epp($autokey_phrase, {'name' => 'Username', 'hotkey' => 'j'}),
+  owner   => $username,
+  group   => $username,
 }
 
 # CliPass
 $composer_template = @(END)
+#!/bin/bash
+hash="e115a8dc7871f15d853148a7fbac7da27d6c0030b848d9b3dc09e2a0388afed865e6a3d6b3c0fad45c48e2b5fc1196ae"
 php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-php -r "if (hash_file('SHA384', 'composer-setup.php') === '070854512ef404f16bac87071a6db9fd9721da1684cd4589b1196c3faf71b9a2682e2311b36a5079825e155ac7ce150d') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+php -r "if (hash_file('SHA384', 'composer-setup.php') === '${hash}') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
 php composer-setup.php
 php -r "unlink('composer-setup.php');"
 END
@@ -276,20 +463,26 @@ vcsrepo{$clipass_root:
   ensure => present,
   provider => 'git',
   source => 'https://github.com/bartlomiej-dudala/clipass.git',
+  user => $username,
 } -> 
 file{"${clipass_root}/get_composer.sh":
   content => inline_epp($composer_template),
   mode => '0755',
+  owner => $username,
 } ->
 exec{"install_composer":
+  user => $username,
+  environment => ["HOME=/home/${username}"],
+  logoutput => true,
   cwd => $clipass_root,
-  command => "${clipass_root}/get_composer.sh",
-  # This is wrong, I just don't know what is correct
-  creates => "${clipass_root}/vendor",
+  command => "/bin/bash ./get_composer.sh",
+  creates => "${clipass_root}/composer.phar",
 } -> 
 exec{"install clipass":
+  user => $username,
+  environment => ["HOME=/home/${username}"],
   cwd => $clipass_root,
-  command => "/usr/bin/php composar.phar install",
+  command => "/usr/bin/php composer.phar install",
   # This is wrong, I just don't know what is correct
   creates => "${clipass_root}/vendor/autoload.php",
 }
