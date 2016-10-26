@@ -270,105 +270,7 @@ file{"${home}/.xinitrc":
 ###################################################################
 # Autokey scripts + keepass integration
 ###################################################################
-$autokey_keepass_template = @(END)
-key = '<%= $keepass_key %>'
-clipass_path = '<%= $clipass_path %>'
-output = system.exec_command("echo `php "+clipass_path+" --key='"+key+"'`")
-keyboard.send_keys(output)
-END
 
-$autokey_phrase = @(END)
-{
-    "usageCount": 2, 
-    "omitTrigger": false, 
-    "prompt": false, 
-    "description": "<%= $name %>", 
-    "abbreviation": {
-        "wordChars": "[\\w]", 
-        "abbreviations": [], 
-        "immediate": false, 
-        "ignoreCase": false, 
-        "backspace": true, 
-        "triggerInside": false
-    }, 
-    "hotkey": {
-        "hotKey": "<%= $hotkey %>", 
-        "modifiers": [
-            "<super>"
-        ]
-    }, 
-    "modes": [
-        3
-    ], 
-    "showInTrayMenu": false, 
-    "matchCase": false, 
-    "filter": {
-        "regex": null, 
-        "isRecursive": false
-    }, 
-    "type": "phrase", 
-    "sendMode": "kb"
-}
-END
-
-$autokey_script = @(END)
-{
-    "usageCount": 0, 
-    "omitTrigger": false, 
-    "prompt": false, 
-    "description": "<%= $name %>", 
-    "abbreviation": {
-        "wordChars": "[\\w]", 
-        "abbreviations": [], 
-        "immediate": false, 
-        "ignoreCase": false, 
-        "backspace": true, 
-        "triggerInside": false
-    }, 
-    "hotkey": {
-        "hotKey": "<%= $hotkey %>", 
-        "modifiers": [
-            "<super>"
-        ]
-    }, 
-    "modes": [
-        3
-    ], 
-    "showInTrayMenu": false, 
-    "filter": {
-        "regex": null, 
-        "isRecursive": false
-    }, 
-    "type": "script", 
-    "store": {}
-}
-END
-
-$autokey_folder = @(END)
-{
-    "usageCount": 0, 
-    "abbreviation": {
-        "wordChars": "[\\w]", 
-        "abbreviations": [], 
-        "immediate": false, 
-        "ignoreCase": false, 
-        "backspace": true, 
-        "triggerInside": false
-    }, 
-    "modes": [], 
-    "title": "<%= $name %>", 
-    "hotkey": {
-        "hotKey": null, 
-        "modifiers": []
-    }, 
-    "filter": {
-        "regex": null, 
-        "isRecursive": false
-    }, 
-    "type": "folder", 
-    "showInTrayMenu": false
-}
-END
 
 file{"${home}/workspace/keepass":
   ensure => directory,
@@ -382,71 +284,44 @@ file { "${home}/AK Scripts":
   owner  => $username,
   group  => $username,
 }
-file { "${home}/AK Scripts/.folder.json":
-  ensure  => file,
-  content => inline_epp($autokey_folder, {'name' => 'AK Scripts'}),
-  owner  => $username,
-  group  => $username,
+autokey{'AK Scripts':
+  type => 'folder',
 }
-file { "${home}/AK Scripts/pw-pk.py":
-  ensure  => file,
-  content => inline_epp($autokey_keepass_template, {'keepass_key' => 'ProKarma'}),
-  owner  => $username,
-  group  => $username,
+autokey{'pw-pk':
+  type => 'script',
+  keepass_key => 'ProKarma',
+  hotkey => '[',
 }
-file { "${home}/AK Scripts/.pw-pk.json":
-  ensure  => file,
-  content => inline_epp($autokey_script, {'name' => 'pw-pk', 'hotkey' => 'p'}),
-  owner   => $username,
-  group   => $username,
+autokey{'pw-tmo1':
+  type => 'script',
+  keepass_key => 'T-Mobile NTid',
+  hotkey => 'o',
 }
-file { "${home}/AK Scripts/pw-tmo1.py":
-  ensure  => file,
-  content => inline_epp($autokey_keepass_template, {'keepass_key' => 'T-Mobile NTid'}),
-  owner   => $username,
-  group   => $username,
+autokey{'pw-tmo2':
+  type => 'script',
+  keepass_key => 'T-Mobile two',
+  hotkey => 'i',
 }
-file { "${home}/AK Scripts/.pw-tmo1.json":
-  ensure  => file,
-  content => inline_epp($autokey_script, {'name' => 'pw-tmo1', 'hotkey' => 'o'}),
-  owner   => $username,
-  group   => $username,
+autokey{'pw-tmo3':
+  type => 'script',
+  keepass_key => 'T-Mobile corp account',
+  hotkey => 'y',
 }
-file { "${home}/AK Scripts/pw-tmo2.py":
-  ensure  => file,
-  content => inline_epp($autokey_keepass_template, {'keepass_key' => 'T-Mobile two'}),
-  owner   => $username,
-  group   => $username,
+autokey{'Email':
+  type => 'phrase',
+  keepass_key => '@prokarma.com',
+  hotkey => 'e',
 }
-file { "${home}/AK Scripts/.pw-tmo2.json":
-  ensure  => file,
-  content => inline_epp($autokey_script, {'name' => 'pw-tmo2', 'hotkey' => 'i'}),
-  owner   => $username,
-  group   => $username,
+autokey{'Username':
+  type => 'phrase',
+  keepass_key => 'jsouza',
+  hotkey => 'j',
 }
-file { "${home}/AK Scripts/Email.txt":
-  ensure  => file,
-  content => '@prokarma.com',
-  owner   => $username,
-  group   => $username,
-}
-file { "${home}/AK Scripts/.Email.json":
-  ensure  => file,
-  content => inline_epp($autokey_phrase, {'name' => 'Email', 'hotkey' => 'e'}),
-  owner   => $username,
-  group   => $username,
-}
-file { "${home}/AK Scripts/Username.txt":
-  ensure  => file,
-  content => 'jsouza',
-  owner   => $username,
-  group   => $username,
-}
-file { "${home}/AK Scripts/.Username.json":
-  ensure  => file,
-  content => inline_epp($autokey_phrase, {'name' => 'Username', 'hotkey' => 'j'}),
-  owner   => $username,
-  group   => $username,
+
+autokey{'BogusPass':
+  type => 'phrase',
+  keepass_key => '1qaz2wsx@',
+  hotkey => 'u',
 }
 
 # CliPass
@@ -487,3 +362,149 @@ exec{"install clipass":
   creates => "${clipass_root}/vendor/autoload.php",
 }
 notice("You may need to run the composer stuff in ${clipass_root} manually?")
+
+define autokey(
+  $type = 'script',
+  $hotkey = '',
+  $keepass_key = '',
+) {
+  ########################
+  ### Autokey content definitions
+  ##########################
+
+  $autokey_keepass_template = @(END)
+key = '<%= $keepass_key %>'
+clipass_path = '<%= $clipass_path %>'
+output = system.exec_command("echo `php "+clipass_path+" --key='"+key+"'`")
+keyboard.send_keys(output)
+END
+
+  $autokey_phrase = @(END)
+  {
+      "usageCount": 2, 
+      "omitTrigger": false, 
+      "prompt": false, 
+      "description": "<%= $name %>", 
+      "abbreviation": {
+          "wordChars": "[\\w]", 
+          "abbreviations": [], 
+          "immediate": false, 
+          "ignoreCase": false, 
+          "backspace": true, 
+          "triggerInside": false
+      }, 
+      "hotkey": {
+          "hotKey": "<%= $hotkey %>", 
+          "modifiers": [
+              "<super>"
+          ]
+      }, 
+      "modes": [
+          3
+      ], 
+      "showInTrayMenu": false, 
+      "matchCase": false, 
+      "filter": {
+          "regex": null, 
+          "isRecursive": false
+      }, 
+      "type": "phrase", 
+      "sendMode": "kb"
+  }
+  END
+
+  $autokey_script = @(END)
+  {
+      "usageCount": 0, 
+      "omitTrigger": false, 
+      "prompt": false, 
+      "description": "<%= $name %>", 
+      "abbreviation": {
+          "wordChars": "[\\w]", 
+          "abbreviations": [], 
+          "immediate": false, 
+          "ignoreCase": false, 
+          "backspace": true, 
+          "triggerInside": false
+      }, 
+      "hotkey": {
+          "hotKey": "<%= $hotkey %>", 
+          "modifiers": [
+              "<super>"
+          ]
+      }, 
+      "modes": [
+          3
+      ], 
+      "showInTrayMenu": false, 
+      "filter": {
+          "regex": null, 
+          "isRecursive": false
+      }, 
+      "type": "script", 
+      "store": {}
+  }
+  END
+
+  $autokey_folder = @(END)
+  {
+      "usageCount": 0, 
+      "abbreviation": {
+          "wordChars": "[\\w]", 
+          "abbreviations": [], 
+          "immediate": false, 
+          "ignoreCase": false, 
+          "backspace": true, 
+          "triggerInside": false
+      }, 
+      "modes": [], 
+      "title": "<%= $name %>", 
+      "hotkey": {
+          "hotKey": null, 
+          "modifiers": []
+      }, 
+      "filter": {
+          "regex": null, 
+          "isRecursive": false
+      }, 
+      "type": "folder", 
+      "showInTrayMenu": false
+  }
+  END
+
+  #######################################
+
+  case $type {
+    'folder': {
+      $content=$autokey_folder
+      $filename='.folder.json'
+    }
+    'script': {
+      $content=$autokey_script
+      $filename=".${name}.json"
+      file { "${home}/AK Scripts/${name}.py":
+        ensure  => file,
+        content => inline_epp($autokey_keepass_template, {'keepass_key' => $keepass_key}),
+        owner  => $username,
+        group  => $username,
+      }
+    } 
+    'phrase': {
+      $content=$autokey_phrase
+      $filename=".${name}.json"
+      file { "${home}/AK Scripts/${name}.txt":
+        ensure  => file,
+        content => $keepass_key,
+        owner  => $username,
+        group  => $username,
+      }
+    } 
+  }
+
+  file { "${home}/AK Scripts/${filename}":
+    ensure  => file,
+    content => inline_epp($content, {'name' => $name, 'hotkey' => $hotkey}),
+    owner   => $username,
+    group   => $username,
+  }
+}
